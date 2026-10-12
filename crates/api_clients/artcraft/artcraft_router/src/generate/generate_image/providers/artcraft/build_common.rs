@@ -1,4 +1,4 @@
-use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::OmniGenImageCostAndGenerateRequest;
+use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::{OmniGenImageCostAndGenerateRequest, OmniImageBackground};
 use enums::common::generation::common_aspect_ratio::CommonAspectRatio as CommonAspectRatioEnum;
 use enums::common::generation::common_image_model::CommonImageModel as CommonImageModelEnum;
 use enums::common::generation::common_quality::CommonQuality as CommonQualityEnum;
@@ -6,6 +6,7 @@ use enums::common::generation::common_resolution::CommonResolution as CommonReso
 use tokens::tokens::media_files::MediaFileToken;
 
 use crate::api::router_aspect_ratio::RouterAspectRatio;
+use crate::api::router_image_background::{resolve_router_image_background, RouterImageBackground};
 use crate::api::router_quality::RouterQuality;
 use crate::api::router_resolution::RouterResolution;
 use crate::api::image_list_ref::ImageListRef;
@@ -36,6 +37,7 @@ pub fn build_artcraft_omni_image_request(
   let aspect_ratio = builder.aspect_ratio.map(to_aspect_ratio_enum);
   let resolution = builder.resolution.map(to_resolution_enum);
   let quality = builder.quality.map(to_quality_enum);
+  let background = plan_background(model, builder.background);
   let idempotency_token = builder.get_or_generate_idempotency_token();
 
   Ok(OmniGenImageCostAndGenerateRequest {
@@ -46,6 +48,7 @@ pub fn build_artcraft_omni_image_request(
     resolution,
     aspect_ratio,
     quality,
+    background,
     image_batch_count: Some(image_batch_count),
     adjust_horizontal_angle: builder.horizontal_angle,
     adjust_vertical_angle: builder.vertical_angle,
@@ -147,6 +150,29 @@ fn to_resolution_enum(r: RouterResolution) -> CommonResolutionEnum {
     RouterResolution::SevenTwentyP => CommonResolutionEnum::SevenTwentyP,
     RouterResolution::TenEightyP => CommonResolutionEnum::TenEightyP,
   }
+}
+
+/// GPT Image requests default to a transparent background. Other models omit the field.
+fn plan_background(
+  model: CommonImageModelEnum,
+  background: Option<RouterImageBackground>,
+) -> Option<OmniImageBackground> {
+  let is_gpt_image = matches!(
+    model,
+    CommonImageModelEnum::GptImage1
+      | CommonImageModelEnum::GptImage1p5
+      | CommonImageModelEnum::GptImage2
+      | CommonImageModelEnum::GptImage2p5Flare
+      | CommonImageModelEnum::GptImage2p5Sunburst
+  );
+  if !is_gpt_image && background.is_none() {
+    return None;
+  }
+  Some(match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => OmniImageBackground::Auto,
+    RouterImageBackground::Opaque => OmniImageBackground::Opaque,
+    RouterImageBackground::Transparent => OmniImageBackground::Transparent,
+  })
 }
 
 fn to_quality_enum(q: RouterQuality) -> CommonQualityEnum {

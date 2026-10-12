@@ -1,4 +1,5 @@
 use crate::requests::api::image::common::gpt_image_2_resolution::GptImage2Resolution;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_background::GptImage2p5Background;
 use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_image_size::GptImage2p5ImageSize;
 use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_num_images::GptImage2p5NumImages;
@@ -31,10 +32,11 @@ pub struct GptImage2p5TextToImageParams {
   /// Quality tier. `None` lets Fal default to `high`.
   pub quality: Option<GptImage2p5Quality>,
 
-  /// Background treatment. `None` lets Fal default to `auto`.
+  /// Background treatment. `None` sends `transparent` (Fal's own default is `auto`).
+  /// `auto` and `opaque` are still sent when chosen.
   pub background: Option<GptImage2p5Background>,
 
-  /// Output format. `None` sends `png`.
+  /// Output format. `None` sends `png`. A transparent background never sends `jpeg`.
   pub output_format: Option<GptImage2p5OutputFormat>,
 
   /// Compression level 0 to 100. Only sent for `jpeg` and `webp`.
@@ -48,8 +50,19 @@ impl GptImage2p5TextToImageParams {
   /// Fal's default when `quality` is omitted.
   pub const DEFAULT_QUALITY: GptImage2p5Quality = GptImage2p5Quality::High;
 
+  /// Our default when `background` is omitted. Fal's schema default is `auto`.
+  pub const DEFAULT_BACKGROUND: GptImage2p5Background = GptImage2p5Background::Transparent;
+
   pub fn to_raw_input(&self) -> GptImage2p5TextToImageInput {
-    let output_format = self.output_format.unwrap_or(GptImage2p5OutputFormat::Png);
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      self.background.map(|b| b.to_str()),
+      self.output_format.map(|f| f.to_str()),
+    );
+    let output_format = match output_format.as_str() {
+      "jpeg" => GptImage2p5OutputFormat::Jpeg,
+      "webp" => GptImage2p5OutputFormat::Webp,
+      _ => GptImage2p5OutputFormat::Png,
+    };
     let output_compression = if output_format.supports_compression() {
       self.output_compression.map(|c| c.min(100))
     } else {
@@ -59,7 +72,7 @@ impl GptImage2p5TextToImageParams {
     GptImage2p5TextToImageInput {
       prompt: self.prompt.clone(),
       image_size: self.image_size.map(|size| size.to_raw_param(self.resolution)),
-      background: self.background.map(|b| b.to_str().to_string()),
+      background: Some(background),
       quality: self.quality.map(|q| q.to_str().to_string()),
       num_images: Some(self.num_images.to_u8()),
       output_format: Some(output_format.to_str().to_string()),
@@ -95,7 +108,7 @@ mod tests {
       let raw = make_params(One, None, None, None).to_raw_input();
       assert_eq!(raw.prompt, "test");
       assert!(raw.image_size.is_none());
-      assert!(raw.background.is_none());
+      assert_eq!(raw.background.as_deref(), Some("transparent"));
       assert!(raw.quality.is_none());
       assert_eq!(raw.num_images, Some(1));
       assert_eq!(raw.output_format.as_deref(), Some("png"));
@@ -109,8 +122,32 @@ mod tests {
       assert_eq!(json, serde_json::json!({
         "prompt": "test",
         "num_images": 1,
+        "background": "transparent",
         "output_format": "png",
       }));
+    }
+
+    #[test]
+    fn transparent_jpeg_is_sent_as_png() {
+      let mut params = make_params(One, None, None, None);
+      params.output_format = Some(GptImage2p5OutputFormat::Jpeg);
+      params.output_compression = Some(40);
+      let raw = params.to_raw_input();
+      assert_eq!(raw.background.as_deref(), Some("transparent"));
+      assert_eq!(raw.output_format.as_deref(), Some("png"));
+      assert!(raw.output_compression.is_none());
+    }
+
+    #[test]
+    fn opaque_keeps_jpeg() {
+      let mut params = make_params(One, None, None, None);
+      params.background = Some(GptImage2p5Background::Opaque);
+      params.output_format = Some(GptImage2p5OutputFormat::Jpeg);
+      params.output_compression = Some(40);
+      let raw = params.to_raw_input();
+      assert_eq!(raw.background.as_deref(), Some("opaque"));
+      assert_eq!(raw.output_format.as_deref(), Some("jpeg"));
+      assert_eq!(raw.output_compression, Some(40));
     }
 
     #[test]
@@ -176,6 +213,8 @@ mod tests {
     #[test]
     fn compression_kept_for_jpeg_and_clamped() {
       let mut params = make_params(One, None, None, None);
+      // Transparent (the omitted default) forces png and drops compression.
+      params.background = Some(GptImage2p5Background::Opaque);
       params.output_format = Some(GptImage2p5OutputFormat::Jpeg);
       params.output_compression = Some(50);
       assert_eq!(params.to_raw_input().output_compression, Some(50));

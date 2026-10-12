@@ -1,4 +1,5 @@
 use crate::creds::fal_api_key::FalApiKey;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::error::classify_fal_error::classify_fal_error;
 use crate::error::fal_error_plus::FalErrorPlus;
 use crate::requests::core_api::webhook_response::WebhookResponse;
@@ -136,31 +137,28 @@ pub async fn enqueue_gpt_image_1_text_to_image_webhook<R: IntoUrl>(
     .to_string()
   });
 
-  let background = req.background.map(|b| {
-    match b {
-      EnqueueGptImage1TextToImageBackground::Auto => "auto",
-      EnqueueGptImage1TextToImageBackground::Transparent => "transparent",
-      EnqueueGptImage1TextToImageBackground::Opaque => "opaque",
-    }
-    .to_string()
+  let background_choice = req.background.map(|b| match b {
+    EnqueueGptImage1TextToImageBackground::Auto => "auto",
+    EnqueueGptImage1TextToImageBackground::Transparent => "transparent",
+    EnqueueGptImage1TextToImageBackground::Opaque => "opaque",
   });
-
-  let output_format = req.output_format.map(|f| {
-    match f {
-      EnqueueGptImage1TextToImageOutputFormat::Jpeg => "jpeg",
-      EnqueueGptImage1TextToImageOutputFormat::Png => "png",
-      EnqueueGptImage1TextToImageOutputFormat::Webp => "webp",
-    }
-    .to_string()
+  let format_choice = req.output_format.map(|f| match f {
+    EnqueueGptImage1TextToImageOutputFormat::Jpeg => "jpeg",
+    EnqueueGptImage1TextToImageOutputFormat::Png => "png",
+    EnqueueGptImage1TextToImageOutputFormat::Webp => "webp",
   });
+  let (background, output_format) = resolve_gpt_image_background_and_format(
+    background_choice,
+    format_choice,
+  );
 
   let request = GptImage1TextToImageInput {
     prompt: req.prompt,
     num_images: Some(num_images),
     image_size,
     quality,
-    background,
-    output_format,
+    background: Some(background),
+    output_format: Some(output_format),
   };
 
   let result = gpt_image_1_text_to_image(request)

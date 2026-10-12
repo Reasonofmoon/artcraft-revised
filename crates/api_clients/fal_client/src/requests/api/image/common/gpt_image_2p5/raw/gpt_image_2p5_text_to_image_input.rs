@@ -14,7 +14,7 @@ pub struct GptImage2p5TextToImageInput {
   pub image_size: Option<GptImage2p5ImageSizeParam>,
 
   /// "auto", "transparent", "opaque"
-  /// Default: "auto"
+  /// Fal's schema default is "auto". Our client sends "transparent" when omitted.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub background: Option<String>,
 

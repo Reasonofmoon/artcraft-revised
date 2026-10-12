@@ -1,6 +1,7 @@
 use crate::creds::fal_api_key::FalApiKey;
 use crate::error::classify_fal_error::classify_fal_error;
 use crate::error::fal_error_plus::FalErrorPlus;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::traits::fal_request_cost_calculator_trait::{FalRequestCostCalculator, UsdCents};
 use crate::requests_old::http::image::edit::http_gpt_image_1p5_edit_image::{gpt_image_1p5_edit_image, GptImage1p5EditImageInput};
 use crate::requests::core_api::webhook_response::WebhookResponse;
@@ -119,13 +120,11 @@ pub async fn enqueue_gpt_image_1p5_image_edit_webhook<R: IntoUrl>(
       })
       .map(|resolution| resolution.to_string());
 
-  let background = req.background
-      .map(|s| match s {
-        EnqueueGptImage1p5EditImageBackground::Auto => "auto",
-        EnqueueGptImage1p5EditImageBackground::Transparent => "transparent",
-        EnqueueGptImage1p5EditImageBackground::Opaque => "opaque",
-      })
-      .map(|aspect_ratio| aspect_ratio.to_string());
+  let background_choice = req.background.map(|s| match s {
+    EnqueueGptImage1p5EditImageBackground::Auto => "auto",
+    EnqueueGptImage1p5EditImageBackground::Transparent => "transparent",
+    EnqueueGptImage1p5EditImageBackground::Opaque => "opaque",
+  });
 
   let quality = req.quality
       .map(|s| match s {
@@ -142,14 +141,15 @@ pub async fn enqueue_gpt_image_1p5_image_edit_webhook<R: IntoUrl>(
       })
       .map(|aspect_ratio| aspect_ratio.to_string());
 
-  let output_format = req.output_format
-      .map(|s| match s {
-        EnqueueGptImage1p5EditImageOutputFormat::Jpeg => "jpeg",
-        EnqueueGptImage1p5EditImageOutputFormat::Png => "png",
-        EnqueueGptImage1p5EditImageOutputFormat::Webp => "webp",
-      })
-      .map(|aspect_ratio| aspect_ratio.to_string())
-      .unwrap_or_else(|| "png".to_string());
+  let format_choice = req.output_format.map(|s| match s {
+    EnqueueGptImage1p5EditImageOutputFormat::Jpeg => "jpeg",
+    EnqueueGptImage1p5EditImageOutputFormat::Png => "png",
+    EnqueueGptImage1p5EditImageOutputFormat::Webp => "webp",
+  });
+  let (background, output_format) = resolve_gpt_image_background_and_format(
+    background_choice,
+    format_choice,
+  );
 
   let request = GptImage1p5EditImageInput {
     prompt: req.prompt,
@@ -159,7 +159,7 @@ pub async fn enqueue_gpt_image_1p5_image_edit_webhook<R: IntoUrl>(
     // Optionals
     mask_image_url: req.mask_image_url,
     image_size,
-    background,
+    background: Some(background),
     quality,
     input_fidelity,
   };

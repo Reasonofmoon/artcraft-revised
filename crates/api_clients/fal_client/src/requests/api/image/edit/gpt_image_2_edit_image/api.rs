@@ -1,4 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::common::gpt_image_2_resolution::{
   compute_custom_image_size, GptImage2AspectRatio, GptImage2Resolution,
 };
@@ -32,7 +33,10 @@ pub struct GptImage2EditImageRequest {
   /// Quality level.
   pub quality: Option<GptImage2EditImageQuality>,
 
-  /// Output format.
+  /// Background. `None` is sent as `transparent` (Fal's schema default is `auto`).
+  pub background: Option<GptImage2EditImageBackground>,
+
+  /// Output format. `None` is sent as `png`. A transparent background never sends `jpeg`.
   pub output_format: Option<GptImage2EditImageOutputFormat>,
 }
 
@@ -67,6 +71,13 @@ pub enum GptImage2EditImageOutputFormat {
   Jpeg,
   Png,
   Webp,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum GptImage2EditImageBackground {
+  Auto,
+  Transparent,
+  Opaque,
 }
 
 /// Map image_size to GptImage2AspectRatio. Returns None for Auto (no
@@ -140,12 +151,20 @@ impl FalEndpoint for GptImage2EditImageRequest {
       GptImage2EditImageQuality::High => "high",
     }.to_string());
 
-    let output_format = Some(match self.output_format {
-      Some(GptImage2EditImageOutputFormat::Jpeg) => "jpeg",
-      Some(GptImage2EditImageOutputFormat::Png) => "png",
-      Some(GptImage2EditImageOutputFormat::Webp) => "webp",
-      None => "png",
-    }.to_string());
+    let background_choice = self.background.map(|b| match b {
+      GptImage2EditImageBackground::Auto => "auto",
+      GptImage2EditImageBackground::Transparent => "transparent",
+      GptImage2EditImageBackground::Opaque => "opaque",
+    });
+    let format_choice = self.output_format.map(|f| match f {
+      GptImage2EditImageOutputFormat::Jpeg => "jpeg",
+      GptImage2EditImageOutputFormat::Png => "png",
+      GptImage2EditImageOutputFormat::Webp => "webp",
+    });
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      background_choice,
+      format_choice,
+    );
 
     Ok(Self::RawRequest {
       prompt: self.prompt.clone(),
@@ -154,7 +173,8 @@ impl FalEndpoint for GptImage2EditImageRequest {
       mask_url: self.mask_url.clone(),
       image_size,
       quality,
-      output_format,
+      background: Some(background),
+      output_format: Some(output_format),
     })
   }
 }
@@ -187,7 +207,7 @@ mod tests {
       image_size: None,
       resolution: None,
       quality: None,
-      output_format: None,
+      background: None, output_format: None,
     };
 
     let result = request.send_queue_request(&api_key).await?;
@@ -210,7 +230,7 @@ mod tests {
       image_size: Some(GptImage2EditImageSize::Square),
       resolution: None,
       quality: Some(GptImage2EditImageQuality::High),
-      output_format: Some(GptImage2EditImageOutputFormat::Png),
+      background: None, output_format: Some(GptImage2EditImageOutputFormat::Png),
     };
 
     let result = request.send_webhook_request(
@@ -268,7 +288,7 @@ mod tests {
           image_size: Some(*size),
           resolution: Some(*resolution),
           quality: Some(GptImage2EditImageQuality::Medium),
-          output_format: Some(GptImage2EditImageOutputFormat::Png),
+          background: None, output_format: Some(GptImage2EditImageOutputFormat::Png),
         };
 
         let result = request.send_queue_request(&api_key).await?;
@@ -296,7 +316,7 @@ mod tests {
         image_size,
         resolution,
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       }
     }
 

@@ -41,6 +41,7 @@ pub async fn handle_qwen_edit_2511_angles(
     resolution: None,
     aspect_ratio: None,
     quality: None,
+    background: None,
     image_batch_count: request.batch_size.map(|n| n as u16),
     request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade,
     generation_mode_mismatch_strategy: None,

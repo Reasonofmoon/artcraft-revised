@@ -33,7 +33,7 @@ pub async fn handle_midjourney(request: &TauriGenerateImageRequest, config: &App
   if request.batch_size.is_some_and(|count| count != 4) {
     return Err(bad_input("Direct Midjourney generates four images per job"));
   }
-  let builder = GenerateImageRequestBuilder { model: tauri_image_model_to_router_model(model).unwrap_or(RouterImageModel::Midjourney8), provider: RouterProvider::Midjourney, prompt: request.prompt.clone(), image_inputs: None, resolution: None, aspect_ratio: request.aspect_ratio.map(convert_aspect_ratio), quality: None, image_batch_count: Some(4), horizontal_angle: None, vertical_angle: None, zoom: None, request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade, generation_mode_mismatch_strategy: Some(GenerationModeMismatchStrategy::AbortGeneration), idempotency_token: None };
+  let builder = GenerateImageRequestBuilder { model: tauri_image_model_to_router_model(model).unwrap_or(RouterImageModel::Midjourney8), provider: RouterProvider::Midjourney, prompt: request.prompt.clone(), image_inputs: None, resolution: None, aspect_ratio: request.aspect_ratio.map(convert_aspect_ratio), quality: None, background: None, image_batch_count: Some(4), horizontal_angle: None, vertical_angle: None, zoom: None, request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade, generation_mode_mismatch_strategy: Some(GenerationModeMismatchStrategy::AbortGeneration), idempotency_token: None };
   let prompt_request = router_image_request_to_artcraft_prompt(&builder);
   let ImageGenerationDraftOrRequest::Request(generation) = builder.build2()? else {
     return Err(bad_input("Unexpected Midjourney request draft"));

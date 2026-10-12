@@ -1,4 +1,5 @@
 use crate::creds::fal_api_key::FalApiKey;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::error::classify_fal_error::classify_fal_error;
 use crate::error::fal_error_plus::FalErrorPlus;
 use crate::requests::traits::fal_request_cost_calculator_trait::{FalRequestCostCalculator, UsdCents};
@@ -25,6 +26,8 @@ pub struct EnqueueGptImage2EditImageRequest {
   pub mask_url: Option<String>,
   pub image_size: Option<EnqueueGptImage2EditImageSize>,
   pub quality: Option<EnqueueGptImage2EditImageQuality>,
+  /// `None` is sent as `transparent` (Fal's schema default is `auto`).
+  pub background: Option<EnqueueGptImage2EditImageBackground>,
   pub output_format: Option<EnqueueGptImage2EditImageOutputFormat>,
 }
 
@@ -59,6 +62,13 @@ pub enum EnqueueGptImage2EditImageOutputFormat {
   Jpeg,
   Png,
   Webp,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum EnqueueGptImage2EditImageBackground {
+  Auto,
+  Transparent,
+  Opaque,
 }
 
 impl FalRequestCostCalculator for EnqueueGptImage2EditImageRequest {
@@ -133,14 +143,20 @@ pub async fn enqueue_gpt_image_2_edit_image_webhook<R: IntoUrl>(
       })
       .map(|quality| quality.to_string());
 
-  let output_format = req.output_format
-      .map(|s| match s {
-        EnqueueGptImage2EditImageOutputFormat::Jpeg => "jpeg",
-        EnqueueGptImage2EditImageOutputFormat::Png => "png",
-        EnqueueGptImage2EditImageOutputFormat::Webp => "webp",
-      })
-      .map(|format| format.to_string())
-      .unwrap_or_else(|| "png".to_string());
+  let background_choice = req.background.map(|b| match b {
+    EnqueueGptImage2EditImageBackground::Auto => "auto",
+    EnqueueGptImage2EditImageBackground::Transparent => "transparent",
+    EnqueueGptImage2EditImageBackground::Opaque => "opaque",
+  });
+  let format_choice = req.output_format.map(|s| match s {
+    EnqueueGptImage2EditImageOutputFormat::Jpeg => "jpeg",
+    EnqueueGptImage2EditImageOutputFormat::Png => "png",
+    EnqueueGptImage2EditImageOutputFormat::Webp => "webp",
+  });
+  let (background, output_format) = resolve_gpt_image_background_and_format(
+    background_choice,
+    format_choice,
+  );
 
   let request = GptImage2EditImageInput {
     prompt: req.prompt,
@@ -151,6 +167,7 @@ pub async fn enqueue_gpt_image_2_edit_image_webhook<R: IntoUrl>(
     mask_url: req.mask_url,
     image_size,
     quality,
+    background: Some(background),
   };
 
   let result = gpt_image_2_edit_image(request)
@@ -192,7 +209,7 @@ mod tests {
         mask_url: None,
         image_size: None,
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       },
       api_key: &api_key,
       webhook_url: "https://example.com/webhook",

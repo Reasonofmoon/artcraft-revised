@@ -1,4 +1,4 @@
-use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::OmniGenImageCostAndGenerateRequest;
+use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::{OmniGenImageCostAndGenerateRequest, OmniImageBackground};
 use artcraft_client::endpoints::omni_gen::generate::image::omni_gen_image::omni_gen_image_generate;
 use enums::common::generation_provider::GenerationProvider;
 use enums::tauri::tasks::task_type::TaskType;
@@ -11,6 +11,8 @@ use crate::core::commands::enqueue::task_enqueue_success::TaskEnqueueSuccess;
 use crate::core::api_adapters::models::image::tauri_image_model_to_enums_model::tauri_image_model_to_enums_model;
 use crate::core::api_adapters::models::image::tauri_image_model_to_generation_model::tauri_image_model_to_generation_model;
 use crate::core::commands::generate::generate_image::tauri_generate_image_request::TauriGenerateImageRequest;
+use crate::core::commands::generate::generate_image::tauri_image_background::TauriImageBackground;
+use crate::core::commands::generate::generate_image::tauri_image_model::TauriImageModel;
 use crate::core::commands::generate::generate_image::utils::parse_semantic_media_files::SemanticMediaFiles;
 use crate::core::state::app_env_configs::app_env_configs::AppEnvConfigs;
 
@@ -39,6 +41,7 @@ pub async fn handle_artcraft_via_omni_endpoint(
     resolution: request.resolution,
     aspect_ratio: request.aspect_ratio,
     quality: request.quality,
+    background: gpt_image_background(request),
     image_batch_count: request.batch_size.map(|n| n as u16),
     adjust_horizontal_angle: request.adjust_horizontal_angle,
     adjust_vertical_angle: request.adjust_vertical_angle,
@@ -68,6 +71,27 @@ pub async fn handle_artcraft_via_omni_endpoint(
     maybe_queue_status_url: None,
     maybe_prompt_token: None,
     maybe_queue_response_url: None,
+  })
+}
+
+fn gpt_image_background(request: &TauriGenerateImageRequest) -> Option<OmniImageBackground> {
+  let is_gpt_image = matches!(
+    request.model,
+    Some(
+      TauriImageModel::GptImage1
+        | TauriImageModel::GptImage1p5
+        | TauriImageModel::GptImage2
+        | TauriImageModel::GptImage2p5Flare
+        | TauriImageModel::GptImage2p5Sunburst
+    )
+  );
+  if !is_gpt_image && request.background.is_none() {
+    return None;
+  }
+  Some(match request.background {
+    Some(TauriImageBackground::Auto) => OmniImageBackground::Auto,
+    Some(TauriImageBackground::Opaque) => OmniImageBackground::Opaque,
+    Some(TauriImageBackground::Transparent) | None => OmniImageBackground::Transparent,
   })
 }
 

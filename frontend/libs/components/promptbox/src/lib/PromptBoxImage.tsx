@@ -28,6 +28,7 @@ import { AspectRatioIcon } from "./common/AspectRatioIcon";
 import { GenerationCountPicker } from "./common/GenerationCountPicker";
 import { ResolutionPicker } from "./common/ResolutionPicker";
 import { QualityPicker } from "./common/QualityPicker";
+import { BackgroundPicker } from "./common/BackgroundPicker";
 import { ReferenceDeck } from "./deck/ReferenceDeck";
 import { useDeckMedia } from "./deck/useDeckMedia";
 import {
@@ -237,6 +238,8 @@ export const PromptBoxImage = ({
   const setCommonResolution = usePromptImageStore((s) => s.setCommonResolution);
   const commonQuality = usePromptImageStore((s) => s.commonQuality);
   const setCommonQuality = usePromptImageStore((s) => s.setCommonQuality);
+  const commonImageBackground = usePromptImageStore((s) => s.commonImageBackground);
+  const setCommonImageBackground = usePromptImageStore((s) => s.setCommonImageBackground);
 
   const [aspectRatioList, setAspectRatioList] = useState<PopoverItem[]>([
     {
@@ -410,6 +413,10 @@ export const PromptBoxImage = ({
         request.quality = selectedModel.resolveQuality(commonQuality);
       }
 
+      if (selectedModel?.supportsImageBackground()) {
+        request.background = selectedModel.resolveImageBackground(commonImageBackground);
+      }
+
       if (
         selectedModel?.canUseImagePrompt &&
         !!referenceImages &&
@@ -563,6 +570,12 @@ export const PromptBoxImage = ({
                   model={selectedModel}
                   currentQuality={commonQuality}
                   handleCommonQualitySelect={setCommonQuality}
+                />
+              )}
+              {selectedModel?.supportsImageBackground() && (
+                <BackgroundPicker
+                  currentBackground={commonImageBackground}
+                  handleBackgroundSelect={setCommonImageBackground}
                 />
               )}
             </div>

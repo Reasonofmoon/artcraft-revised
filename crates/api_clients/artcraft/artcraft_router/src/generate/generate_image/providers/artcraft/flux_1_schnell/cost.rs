@@ -41,6 +41,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: Some(1),
       horizontal_angle: None,
       vertical_angle: None,

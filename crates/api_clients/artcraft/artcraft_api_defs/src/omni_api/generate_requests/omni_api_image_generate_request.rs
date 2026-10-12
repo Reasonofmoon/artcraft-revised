@@ -1,6 +1,7 @@
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::OmniImageBackground;
 use enums::common::generation::common_aspect_ratio::CommonAspectRatio;
 use enums::common::generation::common_image_model::CommonImageModel;
 use enums::common::generation::common_quality::CommonQuality;
@@ -43,6 +44,10 @@ pub struct OmniApiImageGenerateRequest {
 
   /// The quality to use.
   pub quality: Option<CommonQuality>,
+
+  /// GPT Image background. Omitted for models that do not use it.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub background: Option<OmniImageBackground>,
 
   /// How many images to generate.
   pub image_batch_count: Option<u16>,

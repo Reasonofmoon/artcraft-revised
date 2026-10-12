@@ -164,7 +164,7 @@ mod tests {
   fn text_to_image_cost_table_covers_quality_and_size() {
     for (quality, image_size, expected_by_count) in text_to_image_price_cases() {
       for (num_images, expected) in text_to_image_num_image_cases(expected_by_count) {
-        let request = FalGptImage2RequestState::TextToImage(GptImage2TextToImageRequest { prompt: "test".to_string(), num_images, image_size, resolution: None, quality, output_format: None });
+        let request = FalGptImage2RequestState::TextToImage(GptImage2TextToImageRequest { prompt: "test".to_string(), num_images, image_size, resolution: None, quality, background: None, output_format: None });
         let cost = FalGptImage2CostState::from_request(&request).estimate_cost();
         assert_standard_cost_estimate(cost, expected);
       }
@@ -175,7 +175,7 @@ mod tests {
   fn edit_image_cost_table_covers_quality_and_size() {
     for (quality, image_size, expected_by_count) in edit_image_price_cases() {
       for (num_images, expected) in edit_image_num_image_cases(expected_by_count) {
-        let request = FalGptImage2RequestState::EditImage(GptImage2EditImageRequest { prompt: "test".to_string(), image_urls: vec!["https://example.com/image.png".to_string()], num_images, mask_url: None, image_size, resolution: None, quality, output_format: None });
+        let request = FalGptImage2RequestState::EditImage(GptImage2EditImageRequest { prompt: "test".to_string(), image_urls: vec!["https://example.com/image.png".to_string()], num_images, mask_url: None, image_size, resolution: None, quality, background: None, output_format: None });
         let cost = FalGptImage2CostState::from_request(&request).estimate_cost();
         assert_standard_cost_estimate(cost, expected);
       }

@@ -4,6 +4,7 @@ import {
   CommonAspectRatio,
   CommonResolution,
   CommonQuality,
+  CommonImageBackground,
   ImageModel,
 } from "@storyteller/model-list";
 import { GenerationProvider } from "@storyteller/api-enums";
@@ -28,6 +29,9 @@ export interface GenerateImageRequest {
 
   // Quality (used by OpenAI models).
   quality?: CommonQuality | string;
+
+  // GPT Image background. Transparent is the default.
+  background?: CommonImageBackground | string;
 
   // Number of images to generate.
   batch_size?: number;

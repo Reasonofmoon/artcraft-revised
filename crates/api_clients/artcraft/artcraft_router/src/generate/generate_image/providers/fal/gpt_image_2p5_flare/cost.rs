@@ -124,6 +124,7 @@ mod tests {
       resolution,
       aspect_ratio,
       quality,
+      background: None,
       image_batch_count: Some(batch),
       horizontal_angle: None,
       vertical_angle: None,

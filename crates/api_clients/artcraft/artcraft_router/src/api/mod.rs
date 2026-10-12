@@ -6,6 +6,7 @@ pub mod mesh_ref;
 pub mod router_aspect_ratio;
 pub mod router_audio_model;
 pub mod router_bitrate;
+pub mod router_image_background;
 pub mod router_image_model;
 pub mod router_mesh_model;
 pub mod router_provider;

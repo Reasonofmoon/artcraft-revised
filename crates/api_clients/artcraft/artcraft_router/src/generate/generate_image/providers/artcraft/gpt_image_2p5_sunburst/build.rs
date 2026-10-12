@@ -19,7 +19,7 @@ pub fn build_artcraft_gpt_image_2p5_sunburst(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::OmniGenImageCostAndGenerateRequest;
+  use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_image_cost_and_generate_request::{OmniGenImageCostAndGenerateRequest, OmniImageBackground};
   use enums::common::generation::common_aspect_ratio::CommonAspectRatio as CommonAspectRatioEnum;
   use enums::common::generation::common_quality::CommonQuality as CommonQualityEnum;
   use enums::common::generation::common_resolution::CommonResolution as CommonResolutionEnum;
@@ -44,6 +44,7 @@ mod tests {
     assert!(request.aspect_ratio.is_none());
     assert!(request.resolution.is_none());
     assert!(request.quality.is_none());
+    assert_eq!(request.background, Some(OmniImageBackground::Transparent));
     assert!(request.idempotency_token.is_some());
   }
 
@@ -93,6 +94,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: None,
       horizontal_angle: None,
       vertical_angle: None,

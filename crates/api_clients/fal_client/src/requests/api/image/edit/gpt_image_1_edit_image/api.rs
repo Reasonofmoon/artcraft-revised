@@ -1,4 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::edit::gpt_image_1_edit_image::raw_request::{
   GptImage1EditImageInput, GptImage1EditImageOutput,
 };
@@ -112,18 +113,20 @@ impl FalEndpoint for GptImage1EditImageRequest {
       GptImage1EditImageInputFidelity::High => "high",
     }.to_string());
 
-    let background = self.background.map(|b| match b {
+    let background_choice = self.background.map(|b| match b {
       GptImage1EditImageBackground::Auto => "auto",
       GptImage1EditImageBackground::Transparent => "transparent",
       GptImage1EditImageBackground::Opaque => "opaque",
-    }.to_string());
-
-    let output_format = Some(match self.output_format {
-      Some(GptImage1EditImageOutputFormat::Jpeg) => "jpeg",
-      Some(GptImage1EditImageOutputFormat::Png) => "png",
-      Some(GptImage1EditImageOutputFormat::Webp) => "webp",
-      None => "png",
-    }.to_string());
+    });
+    let format_choice = self.output_format.map(|f| match f {
+      GptImage1EditImageOutputFormat::Jpeg => "jpeg",
+      GptImage1EditImageOutputFormat::Png => "png",
+      GptImage1EditImageOutputFormat::Webp => "webp",
+    });
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      background_choice,
+      format_choice,
+    );
 
     Ok(Self::RawRequest {
       prompt: self.prompt.clone(),
@@ -133,8 +136,8 @@ impl FalEndpoint for GptImage1EditImageRequest {
       image_size,
       quality,
       input_fidelity,
-      background,
-      output_format,
+      background: Some(background),
+      output_format: Some(output_format),
     })
   }
 }

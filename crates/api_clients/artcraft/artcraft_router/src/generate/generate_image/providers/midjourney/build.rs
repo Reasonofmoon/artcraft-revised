@@ -118,7 +118,7 @@ mod tests {
   }
 
   fn base_builder() -> GenerateImageRequestBuilder {
-    GenerateImageRequestBuilder { model: RouterImageModel::Midjourney8, provider: RouterProvider::Midjourney, prompt: Some("pirate ship in the city".to_string()), image_inputs: None, resolution: None, aspect_ratio: None, quality: None, image_batch_count: None, horizontal_angle: None, vertical_angle: None, zoom: None, request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade, generation_mode_mismatch_strategy: Some(GenerationModeMismatchStrategy::GenerateAnyway), idempotency_token: None }
+    GenerateImageRequestBuilder { model: RouterImageModel::Midjourney8, provider: RouterProvider::Midjourney, prompt: Some("pirate ship in the city".to_string()), image_inputs: None, resolution: None, aspect_ratio: None, quality: None, background: None, image_batch_count: None, horizontal_angle: None, vertical_angle: None, zoom: None, request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade, generation_mode_mismatch_strategy: Some(GenerationModeMismatchStrategy::GenerateAnyway), idempotency_token: None }
   }
 
   fn built_prompt(builder: GenerateImageRequestBuilder) -> String {

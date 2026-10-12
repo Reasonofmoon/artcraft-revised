@@ -1,4 +1,5 @@
 use crate::requests::api::image::common::gpt_image_2_resolution::GptImage2Resolution;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_background::GptImage2p5Background;
 use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_image_size::GptImage2p5ImageSize;
 use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_num_images::GptImage2p5NumImages;
@@ -41,10 +42,11 @@ pub struct GptImage2p5EditImageParams {
   /// Quality tier. `None` lets Fal default to `high`.
   pub quality: Option<GptImage2p5Quality>,
 
-  /// Background treatment. `None` lets Fal default to `auto`.
+  /// Background treatment. `None` sends `transparent` (Fal's own default is `auto`).
+  /// `auto` and `opaque` are still sent when chosen.
   pub background: Option<GptImage2p5Background>,
 
-  /// Output format. `None` sends `png`.
+  /// Output format. `None` sends `png`. A transparent background never sends `jpeg`.
   pub output_format: Option<GptImage2p5OutputFormat>,
 
   /// Compression level 0 to 100. Only sent for `jpeg` and `webp`.
@@ -58,8 +60,19 @@ impl GptImage2p5EditImageParams {
   /// Fal's default when `quality` is omitted.
   pub const DEFAULT_QUALITY: GptImage2p5Quality = GptImage2p5Quality::High;
 
+  /// Our default when `background` is omitted. Fal's schema default is `auto`.
+  pub const DEFAULT_BACKGROUND: GptImage2p5Background = GptImage2p5Background::Transparent;
+
   pub fn to_raw_input(&self) -> GptImage2p5EditImageInput {
-    let output_format = self.output_format.unwrap_or(GptImage2p5OutputFormat::Png);
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      self.background.map(|b| b.to_str()),
+      self.output_format.map(|f| f.to_str()),
+    );
+    let output_format = match output_format.as_str() {
+      "jpeg" => GptImage2p5OutputFormat::Jpeg,
+      "webp" => GptImage2p5OutputFormat::Webp,
+      _ => GptImage2p5OutputFormat::Png,
+    };
     let output_compression = if output_format.supports_compression() {
       self.output_compression.map(|c| c.min(100))
     } else {
@@ -71,7 +84,7 @@ impl GptImage2p5EditImageParams {
       image_urls: self.image_urls.clone(),
       mask_url: self.mask_url.clone(),
       image_size: self.image_size.map(|size| size.to_raw_param(self.resolution)),
-      background: self.background.map(|b| b.to_str().to_string()),
+      background: Some(background),
       quality: self.quality.map(|q| q.to_str().to_string()),
       num_images: Some(self.num_images.to_u8()),
       output_format: Some(output_format.to_str().to_string()),
@@ -117,6 +130,7 @@ mod tests {
         "prompt": "test",
         "image_urls": [IMAGE_URL],
         "num_images": 1,
+        "background": "transparent",
         "output_format": "png",
       }));
     }

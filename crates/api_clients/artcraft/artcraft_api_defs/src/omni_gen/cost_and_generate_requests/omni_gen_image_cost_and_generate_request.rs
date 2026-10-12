@@ -36,6 +36,11 @@ pub struct OmniGenImageCostAndGenerateRequest {
   /// The quality to use.
   pub quality: Option<CommonQuality>,
 
+  /// GPT Image background. Omitted for models that do not use it.
+  /// `"transparent"` is our default for GPT Image; Fal's own schema default is `"auto"`.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub background: Option<OmniImageBackground>,
+
   /// How many images to generate.
   pub image_batch_count: Option<u16>,
 
@@ -47,4 +52,13 @@ pub struct OmniGenImageCostAndGenerateRequest {
 
   /// Only for angle manipulation models.
   pub adjust_zoom: Option<f64>,
+}
+
+/// GPT Image background values. Serialized as `auto`, `transparent`, or `opaque`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OmniImageBackground {
+  Auto,
+  Transparent,
+  Opaque,
 }

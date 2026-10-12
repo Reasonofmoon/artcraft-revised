@@ -29,6 +29,7 @@ mod tests {
   use super::*;
   use crate::creds::fal_api_key::FalApiKey;
   use crate::requests::api::image::common::gpt_image_2_resolution::GptImage2Resolution;
+  use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_background::GptImage2p5Background;
   use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_image_size::GptImage2p5ImageSize;
   use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_num_images::GptImage2p5NumImages;
   use crate::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_output_format::GptImage2p5OutputFormat;
@@ -52,7 +53,7 @@ mod tests {
         image_size: Some(GptImage2p5ImageSize::Landscape16x9),
         resolution: Some(GptImage2Resolution::TwoK),
         quality: Some(GptImage2p5Quality::Medium),
-        background: None,
+        background: Some(GptImage2p5Background::Opaque),
         output_format: Some(GptImage2p5OutputFormat::Jpeg),
         output_compression: Some(75),
       },
@@ -61,6 +62,7 @@ mod tests {
     assert_eq!(raw.prompt, "test");
     assert_eq!(raw.num_images, Some(2));
     assert_eq!(raw.quality.as_deref(), Some("medium"));
+    assert_eq!(raw.background.as_deref(), Some("opaque"));
     assert_eq!(raw.output_format.as_deref(), Some("jpeg"));
     assert_eq!(raw.output_compression, Some(75));
     match raw.image_size.unwrap() {
