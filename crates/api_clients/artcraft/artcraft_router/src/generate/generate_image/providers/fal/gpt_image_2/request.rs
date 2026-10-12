@@ -101,7 +101,7 @@ mod tests {
       image_size: Some(GptImage2TextToImageSize::Square),
       resolution: Some(GptImage2Resolution::OneK),
       quality: Some(GptImage2TextToImageQuality::Low),
-      output_format: None,
+      background: None, output_format: None,
     });
     let response = request.send(&client_with_webhook()).await.expect("send should succeed");
     let payload = response.get_fal_payload().expect("expected Fal payload");
@@ -119,7 +119,7 @@ mod tests {
       image_size: Some(GptImage2EditImageSize::Square),
       resolution: Some(GptImage2Resolution::OneK),
       quality: Some(GptImage2EditImageQuality::Low),
-      output_format: None,
+      background: None, output_format: None,
     });
     let response = request.send(&client_with_webhook()).await.expect("send should succeed");
     let payload = response.get_fal_payload().expect("expected Fal payload");

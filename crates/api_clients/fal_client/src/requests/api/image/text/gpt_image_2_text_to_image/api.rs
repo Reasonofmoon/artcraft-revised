@@ -1,4 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::common::gpt_image_2_resolution::{
   compute_custom_image_size, GptImage2AspectRatio, GptImage2Resolution,
 };
@@ -26,7 +27,10 @@ pub struct GptImage2TextToImageRequest {
   /// Quality level.
   pub quality: Option<GptImage2TextToImageQuality>,
 
-  /// Output format.
+  /// Background. `None` is sent as `transparent` (Fal's schema default is `auto`).
+  pub background: Option<GptImage2TextToImageBackground>,
+
+  /// Output format. `None` is sent as `png`. A transparent background never sends `jpeg`.
   pub output_format: Option<GptImage2TextToImageOutputFormat>,
 }
 
@@ -60,6 +64,13 @@ pub enum GptImage2TextToImageOutputFormat {
   Jpeg,
   Png,
   Webp,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum GptImage2TextToImageBackground {
+  Auto,
+  Transparent,
+  Opaque,
 }
 
 /// Map our image_size enum to the GptImage2AspectRatio used by the resolution
@@ -123,19 +134,28 @@ impl FalEndpoint for GptImage2TextToImageRequest {
       GptImage2TextToImageQuality::High => "high",
     }.to_string());
 
-    let output_format = Some(match self.output_format {
-      Some(GptImage2TextToImageOutputFormat::Jpeg) => "jpeg",
-      Some(GptImage2TextToImageOutputFormat::Png) => "png",
-      Some(GptImage2TextToImageOutputFormat::Webp) => "webp",
-      None => "png",
-    }.to_string());
+    let background_choice = self.background.map(|b| match b {
+      GptImage2TextToImageBackground::Auto => "auto",
+      GptImage2TextToImageBackground::Transparent => "transparent",
+      GptImage2TextToImageBackground::Opaque => "opaque",
+    });
+    let format_choice = self.output_format.map(|f| match f {
+      GptImage2TextToImageOutputFormat::Jpeg => "jpeg",
+      GptImage2TextToImageOutputFormat::Png => "png",
+      GptImage2TextToImageOutputFormat::Webp => "webp",
+    });
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      background_choice,
+      format_choice,
+    );
 
     Ok(Self::RawRequest {
       prompt: self.prompt.clone(),
       num_images: Some(num_images),
       image_size,
       quality,
-      output_format,
+      background: Some(background),
+      output_format: Some(output_format),
     })
   }
 }
@@ -161,7 +181,7 @@ mod tests {
       image_size: None,
       resolution: None,
       quality: None,
-      output_format: None,
+      background: None, output_format: None,
     };
 
     let result = request.send_queue_request(&api_key).await?;
@@ -182,7 +202,7 @@ mod tests {
       image_size: Some(GptImage2TextToImageSize::Landscape16x9),
       resolution: None,
       quality: Some(GptImage2TextToImageQuality::High),
-      output_format: Some(GptImage2TextToImageOutputFormat::Png),
+      background: None, output_format: Some(GptImage2TextToImageOutputFormat::Png),
     };
 
     let result = request.send_webhook_request(
@@ -238,7 +258,7 @@ mod tests {
           image_size: Some(*size),
           resolution: Some(*resolution),
           quality: Some(GptImage2TextToImageQuality::Medium),
-          output_format: Some(GptImage2TextToImageOutputFormat::Png),
+          background: None, output_format: Some(GptImage2TextToImageOutputFormat::Png),
         };
 
         let result = request.send_queue_request(&api_key).await?;
@@ -262,7 +282,7 @@ mod tests {
         image_size: Some(GptImage2TextToImageSize::Square),
         resolution: None,
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       };
       let raw = request.to_raw_request().unwrap();
       match raw.image_size.unwrap() {
@@ -279,7 +299,7 @@ mod tests {
         image_size: Some(GptImage2TextToImageSize::Landscape16x9),
         resolution: Some(GptImage2Resolution::TwoK),
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       };
       let raw = request.to_raw_request().unwrap();
       match raw.image_size.unwrap() {
@@ -299,7 +319,7 @@ mod tests {
         image_size: None,
         resolution: Some(GptImage2Resolution::TwoK),
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       };
       let raw = request.to_raw_request().unwrap();
       match raw.image_size.unwrap() {
@@ -319,7 +339,7 @@ mod tests {
         image_size: None,
         resolution: None,
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       };
       let raw = request.to_raw_request().unwrap();
       assert!(raw.image_size.is_none());

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { CommonAspectRatio } from "@storyteller/model-list";
 import { CommonResolution } from "@storyteller/model-list";
 import { CommonQuality } from "@storyteller/model-list";
+import { CommonImageBackground } from "@storyteller/model-list";
 
 export interface RefImage {
   id: string;
@@ -118,6 +119,7 @@ interface PromptImageStore {
   commonAspectRatio: CommonAspectRatio | undefined;
   commonResolution: CommonResolution | undefined;
   commonQuality: CommonQuality | undefined;
+  commonImageBackground: CommonImageBackground;
   setPrompt: (prompt: string) => void;
   setAspectRatio: (ratio: AspectRatio) => void;
   setResolution: (resolution: Resolution) => void;
@@ -127,6 +129,7 @@ interface PromptImageStore {
   setCommonAspectRatio: (ratio: CommonAspectRatio | undefined) => void;
   setCommonResolution: (resolution: CommonResolution | undefined) => void;
   setCommonQuality: (quality: CommonQuality | undefined) => void;
+  setCommonImageBackground: (background: CommonImageBackground) => void;
 }
 
 export const usePromptImageStore = create<PromptImageStore>()((set) => ({
@@ -139,6 +142,7 @@ export const usePromptImageStore = create<PromptImageStore>()((set) => ({
   commonAspectRatio: undefined,
   commonResolution: undefined,
   commonQuality: undefined,
+  commonImageBackground: CommonImageBackground.Transparent,
   setPrompt: (prompt) => set({ prompt }),
   setAspectRatio: (aspectRatio) => set({ aspectRatio }),
   setResolution: (resolution) => set({ resolution }),
@@ -148,6 +152,7 @@ export const usePromptImageStore = create<PromptImageStore>()((set) => ({
   setCommonAspectRatio: (commonAspectRatio) => set({ commonAspectRatio }),
   setCommonResolution: (commonResolution) => set({ commonResolution }),
   setCommonQuality: (commonQuality) => set({ commonQuality }),
+  setCommonImageBackground: (commonImageBackground) => set({ commonImageBackground }),
 }));
 
 // ----- Video Prompt Box Store -----

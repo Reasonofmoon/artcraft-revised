@@ -1,5 +1,6 @@
 use crate::generate::generate_image::providers::midjourney::build::build_midjourney;
 use crate::api::router_aspect_ratio::RouterAspectRatio;
+use crate::api::router_image_background::RouterImageBackground;
 use crate::api::router_image_model::RouterImageModel;
 use crate::api::router_quality::RouterQuality;
 use crate::api::router_resolution::RouterResolution;
@@ -77,6 +78,10 @@ pub struct GenerateImageRequestBuilder {
 
   /// The quality level for generation. Not all models use this.
   pub quality: Option<RouterQuality>,
+
+  /// GPT Image background. `None` means transparent for GPT Image models.
+  /// Other models ignore it.
+  pub background: Option<RouterImageBackground>,
 
   /// How many images to generate.
   pub image_batch_count: Option<u16>,

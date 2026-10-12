@@ -1,4 +1,5 @@
 use crate::creds::fal_api_key::FalApiKey;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::error::classify_fal_error::classify_fal_error;
 use crate::error::fal_error_plus::FalErrorPlus;
 use crate::requests::traits::fal_request_cost_calculator_trait::{FalRequestCostCalculator, UsdCents};
@@ -21,6 +22,8 @@ pub struct EnqueueGptImage2TextToImageRequest {
   // Optional
   pub image_size: Option<EnqueueGptImage2TextToImageSize>,
   pub quality: Option<EnqueueGptImage2TextToImageQuality>,
+  /// `None` is sent as `transparent` (Fal's schema default is `auto`).
+  pub background: Option<EnqueueGptImage2TextToImageBackground>,
   pub output_format: Option<EnqueueGptImage2TextToImageOutputFormat>,
 }
 
@@ -54,6 +57,13 @@ pub enum EnqueueGptImage2TextToImageOutputFormat {
   Jpeg,
   Png,
   Webp,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum EnqueueGptImage2TextToImageBackground {
+  Auto,
+  Transparent,
+  Opaque,
 }
 
 
@@ -128,14 +138,20 @@ pub async fn enqueue_gpt_image_2_text_to_image_webhook<R: IntoUrl>(
       })
       .map(|quality| quality.to_string());
 
-  let output_format = req.output_format
-      .map(|s| match s {
-        EnqueueGptImage2TextToImageOutputFormat::Jpeg => "jpeg",
-        EnqueueGptImage2TextToImageOutputFormat::Png => "png",
-        EnqueueGptImage2TextToImageOutputFormat::Webp => "webp",
-      })
-      .map(|format| format.to_string())
-      .unwrap_or_else(|| "png".to_string());
+  let background_choice = req.background.map(|b| match b {
+    EnqueueGptImage2TextToImageBackground::Auto => "auto",
+    EnqueueGptImage2TextToImageBackground::Transparent => "transparent",
+    EnqueueGptImage2TextToImageBackground::Opaque => "opaque",
+  });
+  let format_choice = req.output_format.map(|s| match s {
+    EnqueueGptImage2TextToImageOutputFormat::Jpeg => "jpeg",
+    EnqueueGptImage2TextToImageOutputFormat::Png => "png",
+    EnqueueGptImage2TextToImageOutputFormat::Webp => "webp",
+  });
+  let (background, output_format) = resolve_gpt_image_background_and_format(
+    background_choice,
+    format_choice,
+  );
 
   let request = GptImage2TextToImageInput {
     prompt: req.prompt,
@@ -144,6 +160,7 @@ pub async fn enqueue_gpt_image_2_text_to_image_webhook<R: IntoUrl>(
     // Optionals
     image_size,
     quality,
+    background: Some(background),
   };
 
   let result = gpt_image_2_text_to_image(request)
@@ -175,7 +192,7 @@ mod tests {
         num_images: EnqueueGptImage2TextToImageNumImages::Two,
         image_size: None,
         quality: None,
-        output_format: None,
+        background: None, output_format: None,
       },
       api_key: &api_key,
       webhook_url: "https://example.com/webhook",

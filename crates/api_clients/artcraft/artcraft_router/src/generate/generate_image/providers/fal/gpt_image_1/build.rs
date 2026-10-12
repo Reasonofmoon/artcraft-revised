@@ -1,13 +1,14 @@
 use fal_client::requests::api::image::edit::gpt_image_1_edit_image::api::{
-  GptImage1EditImageNumImages, GptImage1EditImageQuality, GptImage1EditImageRequest,
-  GptImage1EditImageSize,
+  GptImage1EditImageBackground, GptImage1EditImageNumImages, GptImage1EditImageOutputFormat,
+  GptImage1EditImageQuality, GptImage1EditImageRequest, GptImage1EditImageSize,
 };
 use fal_client::requests::api::image::text::gpt_image_1_text_to_image::api::{
-  GptImage1TextToImageNumImages, GptImage1TextToImageQuality,
-  GptImage1TextToImageRequest, GptImage1TextToImageSize,
+  GptImage1TextToImageBackground, GptImage1TextToImageNumImages, GptImage1TextToImageOutputFormat,
+  GptImage1TextToImageQuality, GptImage1TextToImageRequest, GptImage1TextToImageSize,
 };
 
 use crate::api::router_aspect_ratio::RouterAspectRatio;
+use crate::api::router_image_background::{resolve_router_image_background, RouterImageBackground};
 use crate::api::router_quality::RouterQuality;
 use crate::api::image_list_ref::ImageListRef;
 use crate::client::request_mismatch_mitigation_strategy::RequestMismatchMitigationStrategy;
@@ -33,8 +34,8 @@ pub fn build_fal_gpt_image_1(
       num_images: to_t2i_num_images(num_images),
       image_size: image_size.map(to_t2i_image_size),
       quality: Some(to_t2i_quality(quality)),
-      background: None,
-      output_format: None,
+      background: Some(to_t2i_background(builder.background)),
+      output_format: to_t2i_output_format(builder.background),
     })
   } else {
     FalGptImage1RequestState::EditImage(GptImage1EditImageRequest {
@@ -45,8 +46,8 @@ pub fn build_fal_gpt_image_1(
       image_size: image_size.map(to_edit_image_size),
       quality: Some(to_edit_quality(quality)),
       input_fidelity: None,
-      background: None,
-      output_format: None,
+      background: Some(to_edit_background(builder.background)),
+      output_format: to_edit_output_format(builder.background),
     })
   };
 
@@ -173,6 +174,42 @@ fn to_edit_quality(q: PlannedQuality) -> GptImage1EditImageQuality {
   }
 }
 
+fn to_t2i_background(background: Option<RouterImageBackground>) -> GptImage1TextToImageBackground {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage1TextToImageBackground::Auto,
+    RouterImageBackground::Opaque => GptImage1TextToImageBackground::Opaque,
+    RouterImageBackground::Transparent => GptImage1TextToImageBackground::Transparent,
+  }
+}
+
+fn to_edit_background(background: Option<RouterImageBackground>) -> GptImage1EditImageBackground {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage1EditImageBackground::Auto,
+    RouterImageBackground::Opaque => GptImage1EditImageBackground::Opaque,
+    RouterImageBackground::Transparent => GptImage1EditImageBackground::Transparent,
+  }
+}
+
+/// Transparent backgrounds are sent as PNG. Auto and Opaque keep the
+/// serializer's PNG default unless a caller later sets JPEG explicitly.
+fn to_t2i_output_format(
+  background: Option<RouterImageBackground>,
+) -> Option<GptImage1TextToImageOutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage1TextToImageOutputFormat::Png),
+    _ => None,
+  }
+}
+
+fn to_edit_output_format(
+  background: Option<RouterImageBackground>,
+) -> Option<GptImage1EditImageOutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage1EditImageOutputFormat::Png),
+    _ => None,
+  }
+}
+
 fn to_t2i_image_size(s: PlannedImageSize) -> GptImage1TextToImageSize {
   match s {
     PlannedImageSize::Square => GptImage1TextToImageSize::Square,
@@ -218,6 +255,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: None,
       horizontal_angle: None,
       vertical_angle: None,

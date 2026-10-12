@@ -110,7 +110,7 @@ mod tests {
       image_size,
       resolution,
       quality,
-      output_format: None,
+      background: None, output_format: None,
     }
   }
 

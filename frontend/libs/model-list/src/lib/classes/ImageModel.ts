@@ -6,6 +6,7 @@ import { GenerationProvider } from "@storyteller/api-enums";
 import { CommonAspectRatio } from "./properties/CommonAspectRatio.js";
 import { CommonResolution } from "./properties/CommonResolution.js";
 import { CommonQuality } from "./properties/CommonQuality.js";
+import { CommonImageBackground } from "./properties/CommonImageBackground.js";
 
 export class ImageModel extends Model {
   // Typescript type discriminator property
@@ -187,6 +188,24 @@ export class ImageModel extends Model {
   // True if this model exposes a quality picker (e.g. OpenAI image models).
   supportsQuality(): boolean {
     return this.qualityOptions && this.qualityOptions.length > 0;
+  }
+
+  // GPT Image models can choose Auto, Transparent, or Opaque.
+  supportsImageBackground(): boolean {
+    return this.tauriId.startsWith("gpt_image");
+  }
+
+  // Omitted or unknown values use transparent so generated images have no background.
+  resolveImageBackground(current?: CommonImageBackground): CommonImageBackground | undefined {
+    if (!this.supportsImageBackground()) return undefined;
+    if (
+      current === CommonImageBackground.Auto
+      || current === CommonImageBackground.Transparent
+      || current === CommonImageBackground.Opaque
+    ) {
+      return current;
+    }
+    return CommonImageBackground.Transparent;
   }
 
   // A saved tier from another model may not be supported by this model.

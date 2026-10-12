@@ -1,12 +1,15 @@
 use fal_client::requests::api::image::common::gpt_image_2_resolution::GptImage2Resolution;
+use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_background::GptImage2p5Background;
 use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_edit_image_params::GptImage2p5EditImageParams;
 use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_image_size::GptImage2p5ImageSize;
 use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_num_images::GptImage2p5NumImages;
+use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_output_format::GptImage2p5OutputFormat;
 use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_quality::GptImage2p5Quality;
 use fal_client::requests::api::image::common::gpt_image_2p5::gpt_image_2p5_text_to_image_params::GptImage2p5TextToImageParams;
 
 use crate::api::image_list_ref::ImageListRef;
 use crate::api::router_aspect_ratio::RouterAspectRatio;
+use crate::api::router_image_background::{resolve_router_image_background, RouterImageBackground};
 use crate::api::router_quality::RouterQuality;
 use crate::api::router_resolution::RouterResolution;
 use crate::client::request_mismatch_mitigation_strategy::RequestMismatchMitigationStrategy;
@@ -31,6 +34,8 @@ pub fn plan_gpt_image_2p5_params(
   let image_size = plan_image_size(builder.aspect_ratio);
   let resolution = plan_resolution(builder.resolution);
   let quality = Some(plan_quality(builder.quality));
+  let background = Some(plan_background(builder.background));
+  let output_format = plan_output_format(builder.background);
 
   if image_urls.is_empty() {
     Ok(PlannedGptImage2p5Params::TextToImage(GptImage2p5TextToImageParams {
@@ -39,8 +44,8 @@ pub fn plan_gpt_image_2p5_params(
       image_size,
       resolution,
       quality,
-      background: None,
-      output_format: None,
+      background,
+      output_format,
       output_compression: None,
     }))
   } else {
@@ -52,8 +57,8 @@ pub fn plan_gpt_image_2p5_params(
       image_size,
       resolution,
       quality,
-      background: None,
-      output_format: None,
+      background,
+      output_format,
       output_compression: None,
     }))
   }
@@ -84,6 +89,22 @@ fn plan_num_images(
 
 /// GPT Image 2.5 supports every router tier natively. Fal's default (`high`) applies when
 /// unspecified.
+fn plan_background(background: Option<RouterImageBackground>) -> GptImage2p5Background {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage2p5Background::Auto,
+    RouterImageBackground::Opaque => GptImage2p5Background::Opaque,
+    RouterImageBackground::Transparent => GptImage2p5Background::Transparent,
+  }
+}
+
+/// PNG keeps an alpha channel. Auto and Opaque may still use JPEG if a caller sets it.
+fn plan_output_format(background: Option<RouterImageBackground>) -> Option<GptImage2p5OutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage2p5OutputFormat::Png),
+    _ => None,
+  }
+}
+
 fn plan_quality(quality: Option<RouterQuality>) -> GptImage2p5Quality {
   match quality {
     Some(RouterQuality::Auto) => GptImage2p5Quality::Auto,
@@ -165,13 +186,34 @@ mod tests {
   }
 
   #[test]
-  fn optional_fal_fields_are_left_to_fal_defaults() {
+  fn omitted_background_defaults_to_transparent_png() {
     let text = unwrap_t2i(plan_gpt_image_2p5_params(&base_builder()));
-    assert!(text.background.is_none());
-    assert!(text.output_format.is_none());
+    assert_eq!(text.background, Some(GptImage2p5Background::Transparent));
+    assert_eq!(text.output_format, Some(GptImage2p5OutputFormat::Png));
     assert!(text.output_compression.is_none());
     assert!(text.image_size.is_none());
     assert!(text.resolution.is_none());
+
+    let edit = unwrap_edit(plan_gpt_image_2p5_params(&with_reference_image(base_builder())));
+    assert_eq!(edit.background, Some(GptImage2p5Background::Transparent));
+    assert_eq!(edit.output_format, Some(GptImage2p5OutputFormat::Png));
+  }
+
+  #[test]
+  fn explicit_auto_and_opaque_pass_through() {
+    let auto = unwrap_t2i(plan_gpt_image_2p5_params(&GenerateImageRequestBuilder {
+      background: Some(RouterImageBackground::Auto),
+      ..base_builder()
+    }));
+    assert_eq!(auto.background, Some(GptImage2p5Background::Auto));
+    assert!(auto.output_format.is_none());
+
+    let opaque = unwrap_edit(plan_gpt_image_2p5_params(&with_reference_image(GenerateImageRequestBuilder {
+      background: Some(RouterImageBackground::Opaque),
+      ..base_builder()
+    })));
+    assert_eq!(opaque.background, Some(GptImage2p5Background::Opaque));
+    assert!(opaque.output_format.is_none());
   }
 
   #[test]
@@ -299,6 +341,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: None,
       horizontal_angle: None,
       vertical_angle: None,

@@ -1,14 +1,15 @@
 use fal_client::requests::api::image::common::gpt_image_2_resolution::GptImage2Resolution;
 use fal_client::requests::api::image::edit::gpt_image_2_edit_image::api::{
-  GptImage2EditImageNumImages, GptImage2EditImageQuality, GptImage2EditImageRequest,
-  GptImage2EditImageSize,
+  GptImage2EditImageBackground, GptImage2EditImageNumImages, GptImage2EditImageOutputFormat,
+  GptImage2EditImageQuality, GptImage2EditImageRequest, GptImage2EditImageSize,
 };
 use fal_client::requests::api::image::text::gpt_image_2_text_to_image::api::{
-  GptImage2TextToImageNumImages, GptImage2TextToImageQuality,
-  GptImage2TextToImageRequest, GptImage2TextToImageSize,
+  GptImage2TextToImageBackground, GptImage2TextToImageNumImages, GptImage2TextToImageOutputFormat,
+  GptImage2TextToImageQuality, GptImage2TextToImageRequest, GptImage2TextToImageSize,
 };
 
 use crate::api::router_aspect_ratio::RouterAspectRatio;
+use crate::api::router_image_background::{resolve_router_image_background, RouterImageBackground};
 use crate::api::router_quality::RouterQuality;
 use crate::api::router_resolution::RouterResolution;
 use crate::api::image_list_ref::ImageListRef;
@@ -37,7 +38,8 @@ pub fn build_fal_gpt_image_2(
       image_size: image_size.and_then(to_t2i_image_size),
       resolution,
       quality: Some(to_t2i_quality(quality)),
-      output_format: None,
+      background: Some(to_t2i_background(builder.background)),
+      output_format: to_t2i_output_format(builder.background),
     })
   } else {
     FalGptImage2RequestState::EditImage(GptImage2EditImageRequest {
@@ -48,7 +50,8 @@ pub fn build_fal_gpt_image_2(
       image_size: image_size.map(to_edit_image_size),
       resolution,
       quality: Some(to_edit_quality(quality)),
-      output_format: None,
+      background: Some(to_edit_background(builder.background)),
+      output_format: to_edit_output_format(builder.background),
     })
   };
 
@@ -190,6 +193,40 @@ fn to_edit_quality(q: PlannedQuality) -> GptImage2EditImageQuality {
   }
 }
 
+fn to_t2i_background(background: Option<RouterImageBackground>) -> GptImage2TextToImageBackground {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage2TextToImageBackground::Auto,
+    RouterImageBackground::Opaque => GptImage2TextToImageBackground::Opaque,
+    RouterImageBackground::Transparent => GptImage2TextToImageBackground::Transparent,
+  }
+}
+
+fn to_edit_background(background: Option<RouterImageBackground>) -> GptImage2EditImageBackground {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage2EditImageBackground::Auto,
+    RouterImageBackground::Opaque => GptImage2EditImageBackground::Opaque,
+    RouterImageBackground::Transparent => GptImage2EditImageBackground::Transparent,
+  }
+}
+
+fn to_t2i_output_format(
+  background: Option<RouterImageBackground>,
+) -> Option<GptImage2TextToImageOutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage2TextToImageOutputFormat::Png),
+    _ => None,
+  }
+}
+
+fn to_edit_output_format(
+  background: Option<RouterImageBackground>,
+) -> Option<GptImage2EditImageOutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage2EditImageOutputFormat::Png),
+    _ => None,
+  }
+}
+
 fn to_t2i_image_size(s: PlannedImageSize) -> Option<GptImage2TextToImageSize> {
   match s {
     PlannedImageSize::SquareHd => Some(GptImage2TextToImageSize::SquareHd),
@@ -243,6 +280,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: None,
       horizontal_angle: None,
       vertical_angle: None,

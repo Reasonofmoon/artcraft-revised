@@ -86,6 +86,7 @@ mod tests {
       "image_size": "square",
       "quality": "high",
       "num_images": 2,
+      "background": "transparent",
       "output_format": "png",
     }));
   }
@@ -99,6 +100,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: None,
       horizontal_angle: None,
       vertical_angle: None,

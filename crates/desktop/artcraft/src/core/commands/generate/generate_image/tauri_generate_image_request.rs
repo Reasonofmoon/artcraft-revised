@@ -6,6 +6,7 @@ use enums::tauri::ux::tauri_command_caller::TauriCommandCaller;
 use serde_derive::{Deserialize, Serialize};
 use tokens::tokens::media_files::MediaFileToken;
 
+use crate::core::commands::generate::generate_image::tauri_image_background::TauriImageBackground;
 use crate::core::commands::generate::generate_image::tauri_image_model::TauriImageModel;
 use crate::core::commands::response::success_response_wrapper::SerializeMarker;
 
@@ -31,6 +32,9 @@ pub struct TauriGenerateImageRequest {
 
   /// Quality (used by OpenAI models).
   pub quality: Option<CommonQuality>,
+
+  /// GPT Image background. `None` defaults to transparent for GPT Image models.
+  pub background: Option<TauriImageBackground>,
 
   /// The number of images to generate.
   pub batch_size: Option<u32>,

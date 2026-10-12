@@ -1,4 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::text::gpt_image_1p5_text_to_image::raw_request::{
   GptImage1p5TextToImageInput, GptImage1p5TextToImageOutput,
 };
@@ -84,11 +85,11 @@ impl FalEndpoint for GptImage1p5TextToImageRequest {
       GptImage1p5TextToImageSize::Tall => "1024x1536",
     }.to_string());
 
-    let background = self.background.map(|b| match b {
+    let background_choice = self.background.map(|b| match b {
       GptImage1p5TextToImageBackground::Auto => "auto",
       GptImage1p5TextToImageBackground::Transparent => "transparent",
       GptImage1p5TextToImageBackground::Opaque => "opaque",
-    }.to_string());
+    });
 
     let quality = self.quality.map(|q| match q {
       GptImage1p5TextToImageQuality::Low => "low",
@@ -96,20 +97,23 @@ impl FalEndpoint for GptImage1p5TextToImageRequest {
       GptImage1p5TextToImageQuality::High => "high",
     }.to_string());
 
-    let output_format = Some(match self.output_format {
-      Some(GptImage1p5TextToImageOutputFormat::Jpeg) => "jpeg",
-      Some(GptImage1p5TextToImageOutputFormat::Png) => "png",
-      Some(GptImage1p5TextToImageOutputFormat::Webp) => "webp",
-      None => "png",
-    }.to_string());
+    let format_choice = self.output_format.map(|f| match f {
+      GptImage1p5TextToImageOutputFormat::Jpeg => "jpeg",
+      GptImage1p5TextToImageOutputFormat::Png => "png",
+      GptImage1p5TextToImageOutputFormat::Webp => "webp",
+    });
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      background_choice,
+      format_choice,
+    );
 
     Ok(Self::RawRequest {
       prompt: self.prompt.clone(),
       num_images: Some(num_images),
       image_size,
-      background,
+      background: Some(background),
       quality,
-      output_format,
+      output_format: Some(output_format),
     })
   }
 }

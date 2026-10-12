@@ -1,6 +1,8 @@
 use artcraft_router::api::router_aspect_ratio::RouterAspectRatio;
+use artcraft_router::api::router_image_background::RouterImageBackground;
 use artcraft_router::api::router_quality::RouterQuality;
 use artcraft_router::api::router_resolution::RouterResolution;
+use crate::core::commands::generate::generate_image::tauri_image_background::TauriImageBackground;
 use enums::common::generation::common_aspect_ratio::CommonAspectRatio as EnumsAspectRatio;
 use enums::common::generation::common_quality::CommonQuality as EnumsQuality;
 use enums::common::generation::common_resolution::CommonResolution as EnumsResolution;
@@ -25,6 +27,14 @@ pub fn convert_aspect_ratio(value: EnumsAspectRatio) -> RouterAspectRatio {
     EnumsAspectRatio::Auto3k => RouterAspectRatio::Auto3k,
     EnumsAspectRatio::Auto4k => RouterAspectRatio::Auto4k,
     EnumsAspectRatio::SquareHd => RouterAspectRatio::SquareHd,
+  }
+}
+
+pub fn convert_background(value: TauriImageBackground) -> RouterImageBackground {
+  match value {
+    TauriImageBackground::Auto => RouterImageBackground::Auto,
+    TauriImageBackground::Transparent => RouterImageBackground::Transparent,
+    TauriImageBackground::Opaque => RouterImageBackground::Opaque,
   }
 }
 

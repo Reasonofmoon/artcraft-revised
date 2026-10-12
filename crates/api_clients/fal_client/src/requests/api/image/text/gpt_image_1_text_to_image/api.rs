@@ -1,4 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
+use crate::requests::api::image::common::gpt_image_background::resolve_gpt_image_background_and_format;
 use crate::requests::api::image::text::gpt_image_1_text_to_image::raw_request::{
   GptImage1TextToImageInput, GptImage1TextToImageOutput,
 };
@@ -18,10 +19,10 @@ pub struct GptImage1TextToImageRequest {
   /// Quality level.
   pub quality: Option<GptImage1TextToImageQuality>,
 
-  /// Background mode.
+  /// Background. `None` is sent as `transparent` (Fal's schema default is `auto`).
   pub background: Option<GptImage1TextToImageBackground>,
 
-  /// Output format.
+  /// Output format. `None` is sent as `png`. A transparent background never sends `jpeg`.
   pub output_format: Option<GptImage1TextToImageOutputFormat>,
 }
 
@@ -92,26 +93,28 @@ impl FalEndpoint for GptImage1TextToImageRequest {
       GptImage1TextToImageQuality::High => "high",
     }.to_string());
 
-    let background = self.background.map(|b| match b {
+    let background_choice = self.background.map(|b| match b {
       GptImage1TextToImageBackground::Auto => "auto",
       GptImage1TextToImageBackground::Transparent => "transparent",
       GptImage1TextToImageBackground::Opaque => "opaque",
-    }.to_string());
-
-    let output_format = Some(match self.output_format {
-      Some(GptImage1TextToImageOutputFormat::Jpeg) => "jpeg",
-      Some(GptImage1TextToImageOutputFormat::Png) => "png",
-      Some(GptImage1TextToImageOutputFormat::Webp) => "webp",
-      None => "png",
-    }.to_string());
+    });
+    let format_choice = self.output_format.map(|f| match f {
+      GptImage1TextToImageOutputFormat::Jpeg => "jpeg",
+      GptImage1TextToImageOutputFormat::Png => "png",
+      GptImage1TextToImageOutputFormat::Webp => "webp",
+    });
+    let (background, output_format) = resolve_gpt_image_background_and_format(
+      background_choice,
+      format_choice,
+    );
 
     Ok(Self::RawRequest {
       prompt: self.prompt.clone(),
       num_images: Some(num_images),
       image_size,
       quality,
-      background,
-      output_format,
+      background: Some(background),
+      output_format: Some(output_format),
     })
   }
 }
@@ -167,6 +170,21 @@ mod tests {
     println!("Request ID: {:?}", result.request_id);
     assert!(result.request_id.is_some());
     Ok(())
+  }
+
+  #[test]
+  fn omitted_background_is_sent_as_transparent_png() {
+    let request = GptImage1TextToImageRequest {
+      prompt: "a cat".to_string(),
+      num_images: GptImage1TextToImageNumImages::One,
+      image_size: None,
+      quality: None,
+      background: None,
+      output_format: Some(GptImage1TextToImageOutputFormat::Jpeg),
+    };
+    let raw = request.to_raw_request().unwrap();
+    assert_eq!(raw.background.as_deref(), Some("transparent"));
+    assert_eq!(raw.output_format.as_deref(), Some("png"));
   }
 
   // NB: Pricing tests are in cost.rs

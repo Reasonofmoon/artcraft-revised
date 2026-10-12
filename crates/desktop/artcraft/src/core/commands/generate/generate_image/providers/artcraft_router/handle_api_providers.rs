@@ -20,7 +20,7 @@ use crate::core::api_adapters::models::image::tauri_image_model_to_router_model:
 use crate::core::commands::enqueue::generate_error::GenerateError;
 use crate::core::commands::enqueue::task_enqueue_success::TaskEnqueueSuccess;
 use crate::core::commands::generate::common::router_image_request_to_artcraft_prompt::router_image_request_to_artcraft_prompt;
-use crate::core::commands::generate::generate_image::providers::artcraft_router::utils::convert_enums_to_router::{convert_aspect_ratio, convert_quality, convert_resolution};
+use crate::core::commands::generate::generate_image::providers::artcraft_router::utils::convert_enums_to_router::{convert_aspect_ratio, convert_background, convert_quality, convert_resolution};
 use crate::core::commands::generate::generate_image::providers::artcraft_router::utils::map_media_files_to_urls::map_media_file_tokens_to_cdn_urls;
 use crate::core::commands::generate::generate_image::tauri_generate_image_request::TauriGenerateImageRequest;
 use crate::core::commands::generate::generate_image::tauri_image_model::TauriImageModel;
@@ -74,6 +74,7 @@ async fn handle_fal(
     resolution: request.resolution.map(convert_resolution),
     aspect_ratio: request.aspect_ratio.map(convert_aspect_ratio),
     quality: request.quality.map(convert_quality),
+    background: request.background.map(convert_background),
     image_batch_count: request.batch_size.map(|n| n as u16),
     horizontal_angle: request.adjust_horizontal_angle,
     vertical_angle: request.adjust_vertical_angle,

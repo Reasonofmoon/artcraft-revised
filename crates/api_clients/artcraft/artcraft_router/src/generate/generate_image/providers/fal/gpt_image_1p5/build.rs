@@ -1,13 +1,15 @@
 use fal_client::requests::api::image::edit::gpt_image_1p5_edit_image::api::{
-  GptImage1p5EditImageNumImages, GptImage1p5EditImageQuality,
-  GptImage1p5EditImageRequest, GptImage1p5EditImageSize,
+  GptImage1p5EditImageBackground, GptImage1p5EditImageNumImages, GptImage1p5EditImageOutputFormat,
+  GptImage1p5EditImageQuality, GptImage1p5EditImageRequest, GptImage1p5EditImageSize,
 };
 use fal_client::requests::api::image::text::gpt_image_1p5_text_to_image::api::{
-  GptImage1p5TextToImageNumImages, GptImage1p5TextToImageQuality,
+  GptImage1p5TextToImageBackground, GptImage1p5TextToImageNumImages,
+  GptImage1p5TextToImageOutputFormat, GptImage1p5TextToImageQuality,
   GptImage1p5TextToImageRequest, GptImage1p5TextToImageSize,
 };
 
 use crate::api::router_aspect_ratio::RouterAspectRatio;
+use crate::api::router_image_background::{resolve_router_image_background, RouterImageBackground};
 use crate::api::router_quality::RouterQuality;
 use crate::api::image_list_ref::ImageListRef;
 use crate::client::request_mismatch_mitigation_strategy::RequestMismatchMitigationStrategy;
@@ -32,9 +34,9 @@ pub fn build_fal_gpt_image_1p5(
       prompt,
       num_images: to_t2i_num_images(num_images),
       image_size: image_size.map(to_t2i_image_size),
-      background: None,
+      background: Some(to_t2i_background(builder.background)),
       quality: Some(to_t2i_quality(quality)),
-      output_format: None,
+      output_format: to_t2i_output_format(builder.background),
     })
   } else {
     FalGptImage1p5RequestState::EditImage(GptImage1p5EditImageRequest {
@@ -43,10 +45,10 @@ pub fn build_fal_gpt_image_1p5(
       num_images: to_edit_num_images(num_images),
       mask_image_url: None,
       image_size: image_size.map(to_edit_image_size),
-      background: None,
+      background: Some(to_edit_background(builder.background)),
       quality: Some(to_edit_quality(quality)),
       input_fidelity: None,
-      output_format: None,
+      output_format: to_edit_output_format(builder.background),
     })
   };
 
@@ -173,6 +175,40 @@ fn to_edit_quality(q: PlannedQuality) -> GptImage1p5EditImageQuality {
   }
 }
 
+fn to_t2i_background(background: Option<RouterImageBackground>) -> GptImage1p5TextToImageBackground {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage1p5TextToImageBackground::Auto,
+    RouterImageBackground::Opaque => GptImage1p5TextToImageBackground::Opaque,
+    RouterImageBackground::Transparent => GptImage1p5TextToImageBackground::Transparent,
+  }
+}
+
+fn to_edit_background(background: Option<RouterImageBackground>) -> GptImage1p5EditImageBackground {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Auto => GptImage1p5EditImageBackground::Auto,
+    RouterImageBackground::Opaque => GptImage1p5EditImageBackground::Opaque,
+    RouterImageBackground::Transparent => GptImage1p5EditImageBackground::Transparent,
+  }
+}
+
+fn to_t2i_output_format(
+  background: Option<RouterImageBackground>,
+) -> Option<GptImage1p5TextToImageOutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage1p5TextToImageOutputFormat::Png),
+    _ => None,
+  }
+}
+
+fn to_edit_output_format(
+  background: Option<RouterImageBackground>,
+) -> Option<GptImage1p5EditImageOutputFormat> {
+  match resolve_router_image_background(background) {
+    RouterImageBackground::Transparent => Some(GptImage1p5EditImageOutputFormat::Png),
+    _ => None,
+  }
+}
+
 fn to_t2i_image_size(s: PlannedImageSize) -> GptImage1p5TextToImageSize {
   match s {
     PlannedImageSize::Square => GptImage1p5TextToImageSize::Square,
@@ -218,6 +254,7 @@ mod tests {
       resolution: None,
       aspect_ratio: None,
       quality: None,
+      background: None,
       image_batch_count: None,
       horizontal_angle: None,
       vertical_angle: None,

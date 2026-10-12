@@ -30,6 +30,11 @@ pub struct GptImage2EditImageInput {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub quality: Option<String>,
 
+  /// "auto", "transparent", "opaque"
+  /// Fal's schema default is "auto". Our client sends "transparent" when omitted.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub background: Option<String>,
+
   /// 1 - 4
   /// Default: 1
   #[serde(skip_serializing_if = "Option::is_none")]

@@ -1,4 +1,6 @@
-/// Background treatment for the generated image. Fal's default is `Auto`.
+/// Background treatment for the generated image.
+/// Fal's schema default is `Auto` when the field is omitted. Our typed client
+/// sends `Transparent` instead, unless Auto or Opaque is chosen.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum GptImage2p5Background {
   Auto,
